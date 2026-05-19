@@ -1,0 +1,6 @@
+idx: 206
+name: archaeology_journal
+description: 한국고고학저널 목록
+columns:
+  raw: JSON/XML 메타데이터
+

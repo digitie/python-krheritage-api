@@ -1,0 +1,8 @@
+idx: 72
+name: dancheong_pigment
+description: 전통 단청 재료 및 안료
+columns:
+  md_data1: 전통 재료명
+  md_data2: 안료명
+  md_data3: 고문헌명
+

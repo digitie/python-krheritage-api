@@ -1,0 +1,8 @@
+idx: 56
+name: stone_heritage
+description: 석조문화유산 정보
+columns:
+  md_data2: STONE_IDX
+  md_data9: HEIGHT
+  md_data12: 주석재
+
