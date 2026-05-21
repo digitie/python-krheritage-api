@@ -1,6 +1,6 @@
-# Quickstart
+# 빠른 시작
 
-Install from the repository or local checkout during development.
+개발 중에는 repository 또는 local checkout에서 editable install을 사용한다.
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -17,9 +17,8 @@ with HeritageClient(max_rps=5) as client:
     print(HeritageType.NATIONAL_TREASURE.korean)
 ```
 
-Environment variables:
+환경 변수:
 
 - `DATA_GO_KR_SERVICE_KEY`
 - `KHERITAGE_CACHE_DIR`
 - `KHERITAGE_MAX_RPS`
-

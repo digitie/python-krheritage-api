@@ -1,5 +1,3 @@
-# Code of Conduct
+# 행동 강령
 
-Be respectful, concrete, and kind. Keep technical discussion focused on the
-project and the quality of the work.
-
+서로를 존중하고, 구체적으로 말하며, 친절하게 협업한다. 기술 논의는 project와 작업 품질에 집중한다.
