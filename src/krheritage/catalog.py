@@ -55,7 +55,7 @@ def api_catalog(*, gateway: Gateway | None = None) -> tuple[EndpointCatalogRow, 
 
 def env_names_for_gateway(gateway: Gateway) -> tuple[str, ...]:
     if gateway == "data_go_kr":
-        return ("KHERITAGE_API_KEY", "DATA_GO_KR_API_KEY", "SERVICE_KEY")
+        return ("DATA_GO_KR_SERVICE_KEY",)
     return ()
 
 

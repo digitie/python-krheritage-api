@@ -41,8 +41,8 @@ pip install -e ".[debug-ui]"
 streamlit run tools/debug_streamlit.py
 ```
 
-인증키가 필요한 data.go.kr 엔드포인트는 `KHERITAGE_API_KEY`, `DATA_GO_KR_API_KEY`,
-`SERVICE_KEY` 또는 수동 입력을 사용할 수 있습니다. `.env`와 `.env.local`은 Git에서
+인증키가 필요한 data.go.kr 엔드포인트는 `DATA_GO_KR_SERVICE_KEY`
+또는 수동 입력을 사용할 수 있습니다. `.env`와 `.env.local`은 Git에서
 제외됩니다.
 
 ## English

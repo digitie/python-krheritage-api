@@ -9,7 +9,7 @@ from krheritage.exceptions import ConfigError
 
 
 def test_config_prefers_explicit_values(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("KHERITAGE_API_KEY", "env-key")
+    monkeypatch.setenv("DATA_GO_KR_SERVICE_KEY", "env-key")
     monkeypatch.setenv("KHERITAGE_CACHE_DIR", str(tmp_path / "env-cache"))
     monkeypatch.setenv("KHERITAGE_MAX_RPS", "9")
 
@@ -25,7 +25,7 @@ def test_config_prefers_explicit_values(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
 
 def test_config_loads_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("KHERITAGE_API_KEY", "env-key")
+    monkeypatch.setenv("DATA_GO_KR_SERVICE_KEY", "env-key")
     monkeypatch.setenv("KHERITAGE_CACHE_DIR", str(tmp_path))
     monkeypatch.setenv("KHERITAGE_MAX_RPS", "2.5")
 
@@ -37,7 +37,7 @@ def test_config_loads_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
 
 
 def test_config_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("KHERITAGE_API_KEY", raising=False)
+    monkeypatch.delenv("DATA_GO_KR_SERVICE_KEY", raising=False)
     monkeypatch.delenv("KHERITAGE_CACHE_DIR", raising=False)
     monkeypatch.delenv("KHERITAGE_MAX_RPS", raising=False)
 

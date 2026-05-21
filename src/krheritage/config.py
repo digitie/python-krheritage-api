@@ -41,7 +41,7 @@ class HeritageConfig:
         cache_dir: str | Path | None = None,
         max_rps: float | str | None = None,
     ) -> HeritageConfig:
-        resolved_api_key = api_key if api_key is not None else os.getenv("KHERITAGE_API_KEY")
+        resolved_api_key = api_key if api_key is not None else os.getenv("DATA_GO_KR_SERVICE_KEY")
         resolved_cache_dir = Path(
             cache_dir
             if cache_dir is not None

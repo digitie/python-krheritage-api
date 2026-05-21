@@ -19,7 +19,7 @@ with HeritageClient(max_rps=5) as client:
 
 Environment variables:
 
-- `KHERITAGE_API_KEY`
+- `DATA_GO_KR_SERVICE_KEY`
 - `KHERITAGE_CACHE_DIR`
 - `KHERITAGE_MAX_RPS`
 
