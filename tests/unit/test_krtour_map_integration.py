@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from krheritage import PROVIDER_NAME
 from krheritage.integrations.krtour_map import (
     GIS_3070426_DATASET_KEY,
@@ -49,3 +51,10 @@ def test_gis_source_identity_preserves_area_dataset_identity() -> None:
         "source_entity_type": "heritage_area",
         "source_entity_id": "AREA-1",
     }
+
+
+def test_krtour_extra_does_not_depend_on_kraddr_packages() -> None:
+    project_config = Path(__file__).parents[2] / "pyproject.toml"
+
+    assert "python-kraddr-base" not in project_config.read_text(encoding="utf-8")
+    assert "python-kraddr-geo" not in project_config.read_text(encoding="utf-8")
