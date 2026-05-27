@@ -32,8 +32,6 @@ ai = ["datasets>=2.18", "huggingface-hub>=0.22"]
 data = ["pandas>=2.2"]
 krtour = [
   "python-krtour-map>=0.1",
-  "python-kraddr-base>=0.1",
-  "python-kraddr-geo>=0.1",
 ]
 dev = [
   "mypy>=1.9",
