@@ -38,7 +38,7 @@ PC 개발은 Windows 호스트에서 직접 진행한다. 본 저장소는 Node.
 - **`dist/`는 커밋 대상**: `vite build` 산출물을 저장소에 포함한다(ADR-5). 빌드 후 `git diff --exit-code -- dist/`가 깨끗해야 한다.
 - **GitHub Actions 비사용**: 본 저장소는 GitHub CI/CD를 사용하지 않는다(ADR-10). 품질 게이트는 PR 머지 직전 작업자가 로컬에서 실행한다.
 - **`tsconfig.build.json`만 declaration emission**: `dev/`와 `test/` 타입 오류가 배포 산출물에 섞이지 않도록 `tsconfig.build.json`이 `src/`만 대상으로 한다.
-- **에이전트별 고정 worktree**: ChatGPT Codex는 `F:\dev\vw-codex`, Claude Code는 `F:\dev\vw-claude`, Google Antigravity 2.0은 `F:\dev\vw-antigravity`를 사용한다. 작업마다 브랜치만 새로 만들고, CodeGraph는 worktree마다 1회 `codegraph init -i` 후 `codegraph sync`로 유지한다(ADR-12).
+- **에이전트별 고정 worktree**: ChatGPT Codex는 `F:\dev\python-krheritage-api-codex`, Claude Code는 `F:\dev\python-krheritage-api-claude`, Google Antigravity 2.0은 `F:\dev\python-krheritage-api-antigravity`를 사용한다. 작업마다 브랜치만 새로 만들고, CodeGraph는 worktree마다 1회 `codegraph init -i` 후 `codegraph sync`로 유지한다(ADR-12).
 
 작업 전에 반드시 다음을 읽는다:
 
