@@ -48,7 +48,7 @@ PR #14에서 PR #13 follow-up이 정리되고 PR #15에서 문서 구조가 정�
 
 ## 에이전트 worktree + CodeGraph
 
-ChatGPT Codex는 `F:\dev\vw-codex`, Claude Code는 `F:\dev\vw-claude`, Google Antigravity 2.0은 `F:\dev\vw-antigravity`를 고정 worktree로 사용한다. 새 작업은 해당 worktree에서 `git fetch` 후 `git switch -c agent/<topic> main`으로 브랜치만 새로 딴다. CodeGraph는 worktree마다 1회 `codegraph init -i`로 초기화하고 이후에는 `codegraph sync`만 실행한다. `.codegraph/`는 gitignore 대상이며, MCP 설정은 프로젝트 루트 `.codex/config.toml`에 있다.
+ChatGPT Codex는 `F:\dev\python-krheritage-api-codex`, Claude Code는 `F:\dev\python-krheritage-api-claude`, Google Antigravity 2.0은 `F:\dev\python-krheritage-api-antigravity`를 고정 worktree로 사용한다. 새 작업은 해당 worktree에서 `git fetch` 후 `git switch -c agent/<topic> main`으로 브랜치만 새로 딴다. CodeGraph는 worktree마다 1회 `codegraph init -i`로 초기화하고 이후에는 `codegraph sync`만 실행한다. `.codegraph/`는 gitignore 대상이며, MCP 설정은 프로젝트 루트 `.codex/config.toml`에 있다.
 
 ## 로컬 개발 환경
 
