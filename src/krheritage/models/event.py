@@ -23,6 +23,7 @@ class HeritageEvent(KrHeritageModel):
     longitude: float | None = None
     latitude: float | None = None
     url: str | None = None
+    raw: dict[str, object] = Field(default_factory=dict)
 
     @property
     def display_title(self) -> str | None:
