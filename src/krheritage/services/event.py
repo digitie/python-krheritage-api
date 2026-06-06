@@ -71,6 +71,9 @@ def _event_mapping(raw: Mapping[str, Any]) -> dict[str, Any]:
         mapped["subTitle"] = mapped.get("subTitle1")
     if "title" not in mapped:
         mapped["title"] = mapped.get("subTitle") or mapped.get("subTitle1")
+    # 원천 payload를 보존한다 (intangible/legacy/research 모델과 동일 컨벤션 —
+    # 다운스트림 source_records.raw_data 적재용).
+    mapped["raw"] = dict(raw)
     return mapped
 
 

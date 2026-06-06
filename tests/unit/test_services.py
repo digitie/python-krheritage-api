@@ -85,6 +85,9 @@ def test_event_service_iter_months_parses_legacy_and_split_titles() -> None:
     assert events[0].display_title == "Festival Night"
     assert events[0].starts_on is not None
     assert events[0].starts_on.isoformat() == "2026-05-01"
+    # 원천 payload 보존 (intangible/legacy/research 모델과 동일).
+    assert events[0].raw["sn"] == "EVT-1"
+    assert events[0].raw["startDate"] == "20260501"
     assert transport.calls[0] == (
         "http://www.khs.go.kr/cha/openapi/selectEventListOpenapi.do",
         {"searchYear": "2026", "searchMonth": "05"},
