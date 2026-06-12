@@ -14,6 +14,26 @@ def test_heritage_key_computed_fields() -> None:
     assert key.heritage_type.korean == "국보"
 
 
+def test_heritage_key_tolerates_missing_components_in_list_rows() -> None:
+    # live 목록의 결측 key row 때문에 목록 파싱은 관대하게 둔다 (#5).
+    key = HeritageKey.model_validate({"ccbaKdcd": "25"})
+
+    assert key.is_complete is False
+    assert key.ccba_asno is None
+    assert key.ccba_ctcd is None
+    assert key.heritage_type is not None
+
+    summary = HeritageSummary.model_validate(
+        {
+            "key": {"ccbaKdcd": None, "ccbaAsno": None, "ccbaCtcd": None},
+            "ccbaMnm1": "결측 키 row",
+        }
+    )
+
+    assert summary.key.is_complete is False
+    assert summary.key.heritage_type is None
+
+
 def test_heritage_summary_aliases_and_domain() -> None:
     summary = HeritageSummary.model_validate(
         {

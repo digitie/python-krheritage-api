@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -13,6 +14,8 @@ from krheritage.services._payload import (
     result_items,
 )
 from krheritage.transport import SyncTransport
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -128,18 +131,39 @@ class SearchService:
             **accepted_filters,
         ):
             for summary in page.items:
-                yield self.details(
-                    summary.key.ccba_kdcd,
-                    summary.key.ccba_asno,
-                    summary.key.ccba_ctcd,
-                )
+                ccba_kdcd = summary.key.ccba_kdcd
+                ccba_asno = summary.key.ccba_asno
+                ccba_ctcd = summary.key.ccba_ctcd
+                if not ccba_kdcd or not ccba_asno or not ccba_ctcd:
+                    # detail 조회는 복합키 3요소가 모두 있어야 가능하다 — 결측
+                    # row는 조용히 버리지 않고 식별 정보와 함께 경고를 남긴다.
+                    logger.warning(
+                        "Skipping heritage list row without a complete composite key: "
+                        "ccbaKdcd=%r, ccbaAsno=%r, ccbaCtcd=%r, ccbaMnm1=%r (page=%s)",
+                        ccba_kdcd,
+                        ccba_asno,
+                        ccba_ctcd,
+                        summary.name_ko,
+                        page.page,
+                    )
+                    continue
+                yield self.details(ccba_kdcd, ccba_asno, ccba_ctcd)
 
 
 def _first_item_or_result(result: Mapping[str, Any]) -> dict[str, Any]:
     items = result_items(result)
-    if items:
-        return dict(items[0])
-    return dict(result)
+    if not items:
+        return dict(result)
+    # live SearchKindOpenapiDt 응답은 복합키(ccbaKdcd/ccbaAsno/ccbaCtcd)와
+    # longitude/latitude를 <result> 레벨에만 두고 본문은 <item>에 중첩하므로,
+    # result 레벨 leaf 필드를 먼저 깔고 item 필드로 덮어쓴다.
+    merged: dict[str, Any] = {
+        key: value
+        for key, value in result.items()
+        if not isinstance(value, Mapping | list | tuple)
+    }
+    merged.update(items[0])
+    return merged
 
 
 def _without_none(values: dict[str, Any]) -> dict[str, Any]:
