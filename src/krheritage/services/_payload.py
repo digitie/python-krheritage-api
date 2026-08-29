@@ -10,7 +10,17 @@ from krheritage.transport import parse_payload
 
 
 def parsed_result(content: bytes) -> Mapping[str, Any]:
-    payload = parse_payload(content)
+    return unwrap_result(parse_payload(content))
+
+
+def unwrap_result(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Raise on a provider error envelope, then return the ``result`` node.
+
+    Split out from :func:`parsed_result` so callers that already hold a
+    parsed payload (e.g. the debug UI's raw-response inspector) can reuse
+    the same error-envelope check without re-parsing the response bytes.
+    """
+
     _raise_for_error_envelope(payload)
     result = payload.get("result", payload)
     return result if isinstance(result, Mapping) else {"items": result}
