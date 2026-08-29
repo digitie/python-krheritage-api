@@ -5,13 +5,41 @@ from collections.abc import Mapping
 from html import unescape
 from typing import Any
 
+from krheritage.exceptions import ApiErrorResponse
 from krheritage.transport import parse_payload
 
 
 def parsed_result(content: bytes) -> Mapping[str, Any]:
     payload = parse_payload(content)
+    _raise_for_error_envelope(payload)
     result = payload.get("result", payload)
     return result if isinstance(result, Mapping) else {"items": result}
+
+
+def _raise_for_error_envelope(payload: Mapping[str, Any]) -> None:
+    candidates = [payload]
+    if len(payload) == 1:
+        nested = next(iter(payload.values()))
+        if isinstance(nested, Mapping):
+            candidates.append(nested)
+    for node in candidates:
+        header = node.get("cmmMsgHeader")
+        if isinstance(header, Mapping) and header.get("returnAuthMsg"):
+            code = str(header.get("returnReasonCode") or header["returnAuthMsg"])
+            message = str(header.get("errMsg") or header["returnAuthMsg"])
+            raise ApiErrorResponse(code=code, message=message, payload=dict(payload))
+        message_obj = node.get("message")
+        if isinstance(message_obj, Mapping) and _is_error_code(message_obj.get("code")):
+            code = str(message_obj.get("code"))
+            message = str(message_obj.get("text") or message_obj.get("msg") or code)
+            raise ApiErrorResponse(code=code, message=message, payload=dict(payload))
+
+
+def _is_error_code(code: Any) -> bool:
+    try:
+        return int(str(code).strip()) >= 400
+    except (TypeError, ValueError):
+        return False
 
 
 def result_items(result: Mapping[str, Any]) -> list[Mapping[str, Any]]:

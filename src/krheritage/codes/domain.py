@@ -17,6 +17,8 @@ class HeritageDomain(StrEnum):
 
 
 TYPE_TO_DOMAIN: dict[HeritageType, HeritageDomain] = {
+    HeritageType.UNDESIGNATED: HeritageDomain.CULTURAL,
+    HeritageType.NO_DESIGNATION: HeritageDomain.CULTURAL,
     HeritageType.NATIONAL_TREASURE: HeritageDomain.CULTURAL,
     HeritageType.TREASURE: HeritageDomain.CULTURAL,
     HeritageType.HISTORIC_SITE: HeritageDomain.CULTURAL,
