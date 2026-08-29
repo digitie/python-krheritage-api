@@ -8,12 +8,13 @@ from krheritage.transport.client import (
     Transport,
 )
 from krheritage.transport.parser import parse_payload, xml_to_dict
-from krheritage.transport.ratelimit import TokenBucket
+from krheritage.transport.ratelimit import SyncTokenBucket, TokenBucket
 
 __all__ = [
     "URL_ALIASES",
     "AsyncHttpxTransport",
     "SyncHttpxTransport",
+    "SyncTokenBucket",
     "SyncTransport",
     "TokenBucket",
     "Transport",

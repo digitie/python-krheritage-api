@@ -82,6 +82,9 @@ class SearchService:
         raw = _first_item_or_result(result)
         mapped = heritage_model_mapping(raw)
         content = raw.get("content")
+        # content_html is the provider's raw, unsanitized HTML — callers must
+        # sanitize it (e.g. with bleach) before rendering; never inject it
+        # directly into a page (XSS risk).
         mapped["content_html"] = str(content) if content not in (None, "") else None
         mapped["content"] = clean_html_text(content)
         return HeritageDetail.model_validate(mapped)
@@ -101,7 +104,7 @@ class SearchService:
             yield result
             if max_pages is not None and page >= max_pages:
                 return
-            if page * result.size >= result.total:
+            if len(result.items) < page_size:
                 return
             page += 1
 

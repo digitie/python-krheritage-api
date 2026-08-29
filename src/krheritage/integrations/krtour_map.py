@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any
 
 from krheritage import PROVIDER_NAME
@@ -41,7 +43,8 @@ def gis_source_identity(
     properties = feature.properties
     source_id = _first_text(properties, "gid", "id", "fid", "pnu", "mnum", "objectid")
     if source_id is None:
-        source_id = str(abs(hash(repr(properties))))
+        digest = json.dumps(properties, sort_keys=True, default=str).encode()
+        source_id = hashlib.sha256(digest).hexdigest()
     return {
         "provider": PROVIDER_NAME,
         "dataset_key": dataset_key,

@@ -74,12 +74,9 @@ class AsyncHeritageClient:
         cache_dir: str | None = None,
         max_rps: float | None = None,
     ) -> None:
-        self.config = HeritageConfig.from_env(
-            api_key=api_key,
-            cache_dir=cache_dir,
-            max_rps=max_rps,
+        raise NotImplementedError(
+            "AsyncHeritageClient has no async service layer yet; use HeritageClient instead."
         )
-        self.closed = False
 
     async def __aenter__(self) -> AsyncHeritageClient:
         return self

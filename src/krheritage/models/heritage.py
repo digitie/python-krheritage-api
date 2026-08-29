@@ -75,7 +75,6 @@ class HeritageDetail(HeritageSummary):
     quantity: str | None = Field(default=None, alias="ccbaQuan")
     designated_at: str | None = Field(default=None, alias="ccbaAsdt")
     location_text: str | None = Field(default=None, alias="ccbaLcad")
-    manager: str | None = Field(default=None, alias="ccbaAdmin")
     content: str | None = None
     content_html: str | None = None
 
