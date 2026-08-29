@@ -20,7 +20,7 @@ README는 입구 역할만 합니다. 세부 절차와 결정은 아래 문서�
 | API 상세(path/파라미터) | [`docs/api_reference.md`](docs/api_reference.md) |
 | 응답 필드 사전 | [`docs/data_dictionary.md`](docs/data_dictionary.md) |
 | 알려진 endpoint 이동/별칭 | [`docs/anti_corruption.md`](docs/anti_corruption.md) |
-| `kor-travel-map`(구 `python-krtour-map`) 연동 방식 | [`docs/integration_krtour_map.md`](docs/integration_krtour_map.md) |
+| `kor-travel-map`(구 `python-krtour-map`) 연동 방식 | [`docs/integration_kor_travel_map.md`](docs/integration_kor_travel_map.md) |
 | 사용 예제 | [`docs/quickstart.md`](docs/quickstart.md) |
 | 설계 결정 | [`docs/decisions.md`](docs/decisions.md) |
 | 변경 이력 | [`CHANGELOG.md`](CHANGELOG.md) |

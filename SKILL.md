@@ -69,7 +69,7 @@ docs/
   api_reference.md        — 구현된 API의 path/파라미터 상세
   data_dictionary.md      — 응답 필드 사전
   anti_corruption.md      — 알려진 endpoint 이동/별칭
-  integration_krtour_map.md — python-krtour-map(kor-travel-map) 연동 방식
+  integration_kor_travel_map.md — kor-travel-map(구 python-krtour-map) 연동 방식
   quickstart.md           — 사용 예제
 ```
 
