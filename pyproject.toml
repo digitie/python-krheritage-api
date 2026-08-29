@@ -39,6 +39,7 @@ dev = [
   "ruff>=0.4",
 ]
 debug-ui = [
+  "pandas>=2",
   "streamlit>=1.36",
 ]
 

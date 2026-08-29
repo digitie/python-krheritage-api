@@ -53,12 +53,14 @@ TripMate/`kor-travel-map`(구 `python-krtour-map`)은 이 public client와 typed
 ## Debug UI
 
 Streamlit 기반 디버그 UI는 국가유산청 공개 XML 엔드포인트, GIS 응답, data.go.kr 커스텀
-경로를 빠르게 호출하고 Raw Response, Parsed Payload, Pydantic Model, Processed Result,
-Validation Errors, Debug Trace, Fixture / Testcase 탭으로 결과를 확인합니다.
+경로를 빠르게 호출하고 Raw Response, Pydantic Model, Processed Result,
+Validation Errors, Debug Trace, Fixture / Testcase 탭으로 결과를 확인합니다. 요청 파라미터
+폼은 `krheritage.catalog`의 `required_params`/`optional_params` 메타데이터에서 자동
+생성되며, 실제 호출은 `HeritageClient.debug_fetch()` 하나로 라우팅됩니다.
 
 ```powershell
 pip install -e ".[debug-ui]"
-streamlit run tools/debug_streamlit.py
+streamlit run examples/streamlit_debug_ui.py
 ```
 
 인증키가 필요한 data.go.kr 엔드포인트는 `DATA_GO_KR_SERVICE_KEY`

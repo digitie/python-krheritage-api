@@ -34,8 +34,8 @@ def _redacted_status_message(exc: httpx.HTTPStatusError) -> str:
 class SyncHttpxTransport:
     """httpx-backed synchronous transport for public service clients."""
 
-    def __init__(self, config: HeritageConfig) -> None:
-        self._client = httpx.Client(timeout=30.0, follow_redirects=True)
+    def __init__(self, config: HeritageConfig, *, timeout: float = 30.0) -> None:
+        self._client = httpx.Client(timeout=timeout, follow_redirects=True)
         self._bucket = SyncTokenBucket(max_rps=config.max_rps)
         self._api_key = config.api_key
 
