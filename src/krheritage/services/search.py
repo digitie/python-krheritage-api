@@ -96,6 +96,17 @@ class SearchService:
         max_pages: int | None = None,
         **filters: Any,
     ) -> Iterator[PaginatedResult[HeritageSummary]]:
+        """Page through ``list`` until the stream ends.
+
+        The declared ``total`` ends the walk, and it is counted in *pages*,
+        not in rows. A short page does not end it: a full upstream page that
+        lost rows to row-level validation comes back short too, and stopping
+        there truncates the caller's data without ever raising. Counting
+        pages stays exact even when rows are dropped.
+
+        With no trustworthy total we keep paging and let an empty page end
+        it -- one extra request at the tail is the price of not guessing.
+        """
         page = 1
         while True:
             result = self.list(page_size=page_size, page=page, **filters)
@@ -104,8 +115,10 @@ class SearchService:
             yield result
             if max_pages is not None and page >= max_pages:
                 return
-            if len(result.items) < page_size:
-                return
+            if page_size > 0 and result.total:
+                total_pages = (result.total + page_size - 1) // page_size
+                if page >= total_pages:
+                    return
             page += 1
 
     def iter_all_details(
