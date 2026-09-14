@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from krheritage.models import GeoFeature, GeoFeatureCollection, GeoGeometry
 from krheritage.services._payload import parsed_result, result_items
-from krheritage.transport import SyncTransport
+from krheritage.transport import Transport
 
 
 @dataclass(slots=True)
 class GisService:
     """Public GIS service for heritage coordinate/boundary data."""
 
-    transport: SyncTransport
+    transport: Transport
     base_url: str
+    api_key: str | None = field(default=None, repr=False)
 
-    def spca(
+    async def spca(
         self,
         *,
         min_lng: float | None = None,
@@ -33,7 +34,8 @@ class GisService:
             }
         )
         result = parsed_result(
-            self.transport.get(f"{self.base_url}/xmlService/spca.do", params=params)
+            await self.transport.get(f"{self.base_url}/xmlService/spca.do", params=params),
+            api_key=self.api_key,
         )
         features = [_geo_feature_from_mapping(item) for item in result_items(result)]
         return GeoFeatureCollection(

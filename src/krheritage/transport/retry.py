@@ -9,6 +9,10 @@ from krheritage.exceptions import TransportError
 def _is_retryable(exc: BaseException) -> bool:
     if not isinstance(exc, TransportError):
         return False
+    if not exc.retryable:
+        return False
+    if exc.status_code is not None:
+        return exc.status_code == 429 or exc.status_code >= 500
     cause = exc.__cause__
     if isinstance(cause, httpx.HTTPStatusError):
         status_code = cause.response.status_code

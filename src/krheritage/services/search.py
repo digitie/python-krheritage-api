@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
+from collections.abc import AsyncIterator, Mapping
+from dataclasses import dataclass, field
 from typing import Any
 
 from krheritage.models import HeritageDetail, HeritageSummary, PaginatedResult
@@ -13,7 +13,7 @@ from krheritage.services._payload import (
     parsed_result,
     result_items,
 )
-from krheritage.transport import SyncTransport
+from krheritage.transport import Transport
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +22,11 @@ logger = logging.getLogger(__name__)
 class SearchService:
     """Public 국가유산 search/detail service."""
 
-    transport: SyncTransport
+    transport: Transport
     base_url: str
+    api_key: str | None = field(default=None, repr=False)
 
-    def list(
+    async def list(
         self,
         *,
         page_size: int = 100,
@@ -52,7 +53,8 @@ class SearchService:
             }
         )
         result = parsed_result(
-            self.transport.get(f"{self.base_url}/SearchKindOpenapiList.do", params=params)
+            await self.transport.get(f"{self.base_url}/SearchKindOpenapiList.do", params=params),
+            api_key=self.api_key,
         )
         items = [
             HeritageSummary.model_validate(heritage_model_mapping(item))
@@ -65,7 +67,7 @@ class SearchService:
             items=items,
         )
 
-    def details(
+    async def details(
         self,
         ccba_kdcd: str,
         ccba_asno: str,
@@ -77,7 +79,8 @@ class SearchService:
             "ccbaCtcd": ccba_ctcd,
         }
         result = parsed_result(
-            self.transport.get(f"{self.base_url}/SearchKindOpenapiDt.do", params=params)
+            await self.transport.get(f"{self.base_url}/SearchKindOpenapiDt.do", params=params),
+            api_key=self.api_key,
         )
         raw = _first_item_or_result(result)
         mapped = heritage_model_mapping(raw)
@@ -89,13 +92,13 @@ class SearchService:
         mapped["content"] = clean_html_text(content)
         return HeritageDetail.model_validate(mapped)
 
-    def iter_pages(
+    async def iter_pages(
         self,
         *,
         page_size: int = 100,
         max_pages: int | None = None,
         **filters: Any,
-    ) -> Iterator[PaginatedResult[HeritageSummary]]:
+    ) -> AsyncIterator[PaginatedResult[HeritageSummary]]:
         """Page through ``list`` until the stream ends.
 
         The declared ``total`` ends the walk, and it is counted in *pages*,
@@ -109,7 +112,7 @@ class SearchService:
         """
         page = 1
         while True:
-            result = self.list(page_size=page_size, page=page, **filters)
+            result = await self.list(page_size=page_size, page=page, **filters)
             if not result.items:
                 return
             yield result
@@ -121,13 +124,13 @@ class SearchService:
                     return
             page += 1
 
-    def iter_all_details(
+    async def iter_all_details(
         self,
         *,
         page_size: int = 100,
         max_pages: int | None = None,
         **filters: Any,
-    ) -> Iterator[HeritageDetail]:
+    ) -> AsyncIterator[HeritageDetail]:
         accepted_filters = {
             key: filters[key]
             for key in (
@@ -141,7 +144,7 @@ class SearchService:
             )
             if key in filters
         }
-        for page in self.iter_pages(
+        async for page in self.iter_pages(
             page_size=page_size,
             max_pages=max_pages,
             **accepted_filters,
@@ -163,7 +166,7 @@ class SearchService:
                         page.page,
                     )
                     continue
-                yield self.details(ccba_kdcd, ccba_asno, ccba_ctcd)
+                yield (await self.details(ccba_kdcd, ccba_asno, ccba_ctcd))
 
 
 def _first_item_or_result(result: Mapping[str, Any]) -> dict[str, Any]:
@@ -174,9 +177,7 @@ def _first_item_or_result(result: Mapping[str, Any]) -> dict[str, Any]:
     # longitude/latitude를 <result> 레벨에만 두고 본문은 <item>에 중첩하므로,
     # result 레벨 leaf 필드를 먼저 깔고 item 필드로 덮어쓴다.
     merged: dict[str, Any] = {
-        key: value
-        for key, value in result.items()
-        if not isinstance(value, Mapping | list | tuple)
+        key: value for key, value in result.items() if not isinstance(value, Mapping | list | tuple)
     }
     merged.update(items[0])
     return merged

@@ -17,6 +17,7 @@ from datetime import date, datetime
 from os import PathLike
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel
@@ -85,7 +86,7 @@ def jsonable(obj: Any) -> Any:
     return obj
 
 
-def redact_sensitive(obj: Any) -> Any:
+def redact_sensitive(obj: Any, *, api_key: str | None = None) -> Any:
     """Mask API-key/token-shaped values anywhere in a dict/list structure."""
 
     if isinstance(obj, Mapping):
@@ -95,14 +96,27 @@ def redact_sensitive(obj: Any) -> Any:
             if text_key.lower() in SENSITIVE_KEYS:
                 redacted[text_key] = "<REDACTED>"
             else:
-                redacted[text_key] = redact_sensitive(value)
+                redacted[text_key] = redact_sensitive(value, api_key=api_key)
         return redacted
     if isinstance(obj, list | tuple):
-        return [redact_sensitive(item) for item in obj]
+        return [redact_sensitive(item, api_key=api_key) for item in obj]
+    if isinstance(obj, str):
+        obj = re.sub(
+            r"(?i)((?:servicekey|certkey|api_key|apikey|token|key)=)[^&\s#]+",
+            r"\1<REDACTED>",
+            obj,
+        )
+    if api_key:
+        if isinstance(obj, str):
+            return obj.replace(api_key, "<REDACTED>").replace(quote(api_key, safe=""), "<REDACTED>")
+        if isinstance(obj, bytes):
+            return obj.replace(api_key.encode(), b"<REDACTED>").replace(
+                quote(api_key, safe="").encode(), b"<REDACTED>"
+            )
     return obj
 
 
-def debug_error(exc: BaseException) -> dict[str, Any]:
+def debug_error(exc: BaseException, *, api_key: str | None = None) -> dict[str, Any]:
     """Turn an exception into a structured, redacted dict for the debug UI.
 
     Every error carries ``type``/``message``/``traceback``. Package
@@ -115,9 +129,9 @@ def debug_error(exc: BaseException) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "type": exc.__class__.__name__,
         "message": str(exc),
-        "traceback": "".join(
-            _traceback.format_exception(type(exc), exc, exc.__traceback__)
-        )[-_TRACEBACK_CHAR_LIMIT:],
+        "traceback": "".join(_traceback.format_exception(type(exc), exc, exc.__traceback__))[
+            -_TRACEBACK_CHAR_LIMIT:
+        ],
     }
     if isinstance(exc, ApiErrorResponse):
         payload.update(
@@ -140,19 +154,22 @@ def debug_error(exc: BaseException) -> dict[str, Any]:
         payload.update({"failure_kind": "rate_limit", "retryable": True})
     elif isinstance(exc, TransportError):
         match = _HTTP_STATUS_RE.search(str(exc))
-        status_code = int(match.group(1)) if match else None
+        status_code = exc.status_code
+        if status_code is None and match:
+            status_code = int(match.group(1))
         payload.update(
             {
                 "failure_kind": "transport",
                 "status_code": status_code,
-                "retryable": status_code is None or status_code >= 500,
+                "retryable": exc.retryable
+                and (status_code is None or status_code == 429 or status_code >= 500),
             }
         )
     elif isinstance(exc, ConfigError):
         payload.update({"failure_kind": "config", "retryable": False})
     elif isinstance(exc, KrHeritageError):
         payload.update({"failure_kind": "unknown", "retryable": None})
-    return cast(dict[str, Any], redact_sensitive(payload))
+    return cast(dict[str, Any], redact_sensitive(payload, api_key=api_key))
 
 
 def save_fixture(

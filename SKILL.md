@@ -15,8 +15,7 @@ description: 국가유산청/국립문화유산연구원/국립무형유산원/�
 TripMate에서 소비할 수 있는 하나의 Python 인터페이스로 감싸는 **OpenAPI 클라이언트 라이브러리**다.
 
 `HeritageClient`가 목록(`search.list`)/상세(`search.details`)/행사(`event.by_month`)/GIS(`gis.spca`)
-조회를 제공한다. `AsyncHeritageClient`는 아직 자리표시자이며 생성 시 항상
-`NotImplementedError`를 던진다 — 비동기 서비스 레이어가 실제로 구현되기 전까지는 사용할 수 없다.
+조회를 native async로 제공한다. 각 호출은 await, 순회는 async for를 사용한다.
 
 feature 변환/도메인 매핑 로직은 이 저장소의 책임이 아니다(`python-krtour-map`의 ETL 함수가 담당).
 
@@ -42,6 +41,7 @@ python -m mypy src/krheritage
 실제 API 호출을 통한 검증을 진행할 경우:
 ```powershell
 $env:DATA_GO_KR_SERVICE_KEY="..."
+$env:KHERITAGE_RUN_LIVE="1"
 python -m pytest -m live -vv
 ```
 
@@ -53,7 +53,7 @@ Claude Code는 `F:\dev\python-krheritage-api-claude`, Google Antigravity는
 
 ```
 src/krheritage/
-  client.py       — HeritageClient(sync)/AsyncHeritageClient(placeholder) 진입점
+  client.py       — HeritageClient(native async) 진입점
   config.py       — DATA_GO_KR_SERVICE_KEY, KHERITAGE_CACHE_DIR, KHERITAGE_MAX_RPS 로딩
   services/       — search/event/gis/heritage/intangible/legacy/media/research 서비스 클래스
   models/         — 공개 Pydantic 반환 모델
@@ -75,8 +75,7 @@ docs/
 
 ## 4. 절대 하지 말 것 (DO NOT)
 
-1. **`AsyncHeritageClient`를 사용 가능한 것처럼 문서화 금지**: 현재는 항상 `NotImplementedError`를
-   던지는 자리표시자다.
+1. **동기 HTTP와 Async 접두사 별칭을 다시 추가하지 말 것**: HeritageClient 하나로 native async를 제공한다.
 2. **API 오류 envelope을 빈 결과로 조용히 처리 금지**: HTTP 200으로 감싸진 국가유산청 오류 응답은
    `ApiErrorResponse`로 명시적으로 raise해야 한다.
 3. **`docs/anti_corruption.md`에 기록된 legacy URL을 별도 처리 없이 직접 호출 금지**: `transport._aliases`의
@@ -96,3 +95,42 @@ docs/
 | 오류 envelope 처리 추가 | `src/krheritage/exceptions.py`의 기존 타입 계층을 따를 것 |
 | legacy URL 별칭 추가 | `src/krheritage/transport/_aliases`와 `docs/anti_corruption.md` 동시 갱신 |
 | 코드 테이블 추가/수정 | `src/krheritage/codes/`, 공식 출처 확인 후 반영 |
+
+
+## 비동기 호출과 TPS
+
+HeritageClient의 네트워크 메서드는 await, 페이지·상세·월별 반복은 async for,
+종료는 async with 또는 await client.aclose()를 사용한다. 동기 HTTP와
+AsyncHeritageClient 자리표시자·aio 팩터리는 제거했다. 코드표·파싱·메타데이터는
+일반 함수로 유지한다. 기존 서비스 인자와 반환 모델은 동일하다.
+
+max_rps는 기본 5이며 KHERITAGE_MAX_RPS 환경변수로 설정할 수 있다.
+AsyncTokenBucket을 rate_limiter에 주입하면 클라이언트 여러 개의 요청 예산을
+합산하고 max_rps보다 우선한다. 버킷의 기본 capacity는 max(1, max_rps)이며
+초기에 가득 차 있으므로 burst를 허용한다. 일정한 송신 간격이 필요하면 capacity=1을
+사용한다. 모든 서비스·debug·페이지, 각 재시도와 리다이렉트마다 토큰을 소비한다.
+대기 취소는 토큰을 쓰지 않는다. 버킷은 한 이벤트 루프에서만 사용한다.
+
+내부 생성 HTTPX 세션은 문맥 종료 시 닫는다. session으로 주입한 AsyncClient는
+호출자가 닫는다. 본문 스트리밍 중 취소·50MB 상한 오류에도 응답을 닫는다.
+HTTP 429와 5xx 및 전송 오류는 재시도하며 나머지 HTTP 4xx는 즉시 반환한다.
+사용자 정의 인증·transport 내부의 추가 요청은 라이브러리 밖의 동작이다.
+files.write_bytes의 파일 쓰기는 작업 스레드에서 실행한다. 취소는 이미 시작한
+디스크 쓰기를 되돌리지 않는다.
+
+```python
+import asyncio
+from krheritage import AsyncTokenBucket, HeritageClient
+
+
+async def main() -> None:
+    bucket = AsyncTokenBucket(2, capacity=1)
+    async with HeritageClient(rate_limiter=bucket) as client:
+        page = await client.search.list(page_size=1)
+        print(page.items)
+        async for detail in client.heritage.iter_all_details(page_size=1, max_pages=1):
+            print(detail.name_ko)
+
+
+asyncio.run(main())
+```

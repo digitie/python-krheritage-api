@@ -1,39 +1,41 @@
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
+from collections.abc import AsyncIterator, Mapping
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
 
 from krheritage.models import HeritageEvent, PaginatedResult
 from krheritage.services._payload import int_value, parsed_result, result_items
-from krheritage.transport import SyncTransport
+from krheritage.transport import Transport
 
 
 @dataclass(slots=True)
 class EventService:
     """Public 국가유산 event service."""
 
-    transport: SyncTransport
+    transport: Transport
     base_url: str
+    api_key: str | None = field(default=None, repr=False)
 
-    def by_month(self, *, year: int, month: int) -> tuple[HeritageEvent, ...]:
+    async def by_month(self, *, year: int, month: int) -> tuple[HeritageEvent, ...]:
         params = {
             "searchYear": f"{year:04d}",
             "searchMonth": f"{month:02d}",
         }
         result = parsed_result(
-            self.transport.get(
+            await self.transport.get(
                 f"{self.base_url}/openapi/selectEventListOpenapi.do",
                 params=params,
-            )
+            ),
+            api_key=self.api_key,
         )
         return tuple(
             HeritageEvent.model_validate(_event_mapping(item)) for item in result_items(result)
         )
 
-    def list(self, *, year: int, month: int) -> PaginatedResult[HeritageEvent]:
-        items = list(self.by_month(year=year, month=month))
+    async def list(self, *, year: int, month: int) -> PaginatedResult[HeritageEvent]:
+        items = list(await self.by_month(year=year, month=month))
         return PaginatedResult[HeritageEvent](
             total=len(items),
             page=1,
@@ -41,7 +43,7 @@ class EventService:
             items=items,
         )
 
-    def iter_months(
+    async def iter_months(
         self,
         *,
         search_year: int | str | None = None,
@@ -50,11 +52,12 @@ class EventService:
         months_ahead: int | str = 12,
         today: date | None = None,
         **_unused: Any,
-    ) -> Iterator[HeritageEvent]:
+    ) -> AsyncIterator[HeritageEvent]:
         if search_year is not None or search_month is not None:
             year = int_value(search_year, date.today().year)
             month = int_value(search_month, date.today().month)
-            yield from self.by_month(year=year, month=month)
+            for item in await self.by_month(year=year, month=month):
+                yield item
             return
 
         anchor = today or date.today()
@@ -62,7 +65,8 @@ class EventService:
         total_months = int_value(months_back, 1) + int_value(months_ahead, 12) + 1
         for offset in range(total_months):
             year, month = _month_offset(start[0], start[1], offset)
-            yield from self.by_month(year=year, month=month)
+            for item in await self.by_month(year=year, month=month):
+                yield item
 
 
 def _event_mapping(raw: Mapping[str, Any]) -> dict[str, Any]:

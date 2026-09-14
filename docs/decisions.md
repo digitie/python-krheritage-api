@@ -86,3 +86,21 @@ URL 이동 처리를 서비스 코드에 흩뿌리면 같은 문제를 여러 �
 ### 결과
 `docs/anti_corruption.md`가 알려진 이동 목록의 정본이다. 새 이동을 발견하면 이 표와
 `_aliases.py`를 함께 갱신한다.
+
+
+## D-005: native async 서비스와 공통 AsyncTokenBucket (supersedes: D-002)
+
+- 상태: accepted
+- 날짜: 2026-09-14
+
+사용자가 전체 라이브러리 async-only와 같은 TPS 로직 적용을 요청했다.
+HTTP transport뿐 아니라 검색·상세·행사·GIS 서비스와 페이지 반복을 실제로
+비동기화했으므로 D-002의 자리표시자 제약을 해제한다. HeritageClient 하나만
+노출하고 AsyncHeritageClient와 동기 HTTP는 제거한다. 상위 모델·검색 조건·
+페이지 종료 규칙은 보존한다.
+
+공통 표준 라이브러리 AsyncTokenBucket은 초기 burst·FIFO 대기·취소·단일
+이벤트 루프 계약을 따른다. 주입한 버킷으로 클라이언트 사이 TPS를 합산한다.
+키가 들어 있는 HTTP 예외 연결을 숨기면서 상태도 잃던 기존 재시도 판별을
+명시적 status_code로 고쳐 4xx를 불필요하게 반복하지 않는다. 사용자 세션의
+수명은 호출자가 관리하고 스트리밍 본문은 성공·실패·취소 모두에서 닫는다.

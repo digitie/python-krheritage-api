@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 미출시 — async-only와 TPS
+
+HeritageClient의 서비스·페이지·디버그를 native async로 전환했다. AsyncTokenBucket을 공개하고 max_rps/rate_limiter로 요청·재시도·리다이렉트의 TPS를 제어한다. 동기 클라이언트와 비동기 자리표시자·aio를 제거했다. HTTP 상태를 보존한 재시도 판별, 스트림 취소 정리, 사용자 주입 세션 수명을 검증했다.
+
 이 프로젝트의 주요 변경 사항을 기록한다.
 
 ## [0.1.0] - Unreleased

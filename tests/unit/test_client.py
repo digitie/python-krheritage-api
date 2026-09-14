@@ -10,11 +10,11 @@ class _FakeTransport:
         self.response = response
         self.calls: list[tuple[str, dict[str, Any] | None]] = []
 
-    def get(self, url: str, params: dict[str, Any] | None = None) -> bytes:
+    async def get(self, url: str, params: dict[str, Any] | None = None) -> bytes:
         self.calls.append((url, params))
         return self.response
 
-    def close(self) -> None:
+    async def aclose(self) -> None:
         pass
 
 
@@ -59,10 +59,10 @@ def _client_with_fake_transport(response: bytes) -> tuple[HeritageClient, _FakeT
     return client, fake
 
 
-def test_debug_fetch_routes_by_catalog_metadata_and_validates_model() -> None:
+async def test_debug_fetch_routes_by_catalog_metadata_and_validates_model() -> None:
     client, fake = _client_with_fake_transport(_LIST_XML)
 
-    run = client.debug_fetch("khs-search-list", params={"pageUnit": "10", "pageIndex": "1"})
+    run = (await client.debug_fetch("khs-search-list", params={"pageUnit": "10", "pageIndex": "1"}))
 
     assert run.error is None
     assert run.validation_errors == ()
@@ -73,13 +73,13 @@ def test_debug_fetch_routes_by_catalog_metadata_and_validates_model() -> None:
     assert fake.calls[0][1] == {"pageUnit": "10", "pageIndex": "1"}
 
 
-def test_debug_fetch_reports_row_level_validation_errors_structurally() -> None:
+async def test_debug_fetch_reports_row_level_validation_errors_structurally() -> None:
     client, _fake = _client_with_fake_transport(_DETAIL_XML_INCOMPLETE)
 
-    run = client.debug_fetch(
+    run = (await client.debug_fetch(
         "khs-search-detail",
         params={"ccbaKdcd": "99", "ccbaAsno": "9999999999999", "ccbaCtcd": "99"},
-    )
+    ))
 
     assert run.error is None
     assert len(run.validation_errors) == 1
@@ -89,10 +89,10 @@ def test_debug_fetch_reports_row_level_validation_errors_structurally() -> None:
     assert error["traceback"]
 
 
-def test_debug_fetch_structures_provider_error_envelopes() -> None:
+async def test_debug_fetch_structures_provider_error_envelopes() -> None:
     client, _fake = _client_with_fake_transport(_ERROR_XML)
 
-    run = client.debug_fetch("khs-search-list", params={})
+    run = (await client.debug_fetch("khs-search-list", params={}))
 
     assert run.error is not None
     assert run.error["type"] == "ApiErrorResponse"
@@ -101,31 +101,31 @@ def test_debug_fetch_structures_provider_error_envelopes() -> None:
     assert run.processed is None
 
 
-def test_debug_fetch_redacts_the_service_key_from_request_preview() -> None:
+async def test_debug_fetch_redacts_the_service_key_from_request_preview() -> None:
     client, _fake = _client_with_fake_transport(b'{"resultCode":"00"}')
 
-    run = client.debug_fetch(
+    run = (await client.debug_fetch(
         "data-go-kr-custom",
         params={},
         custom_path="/some/service/op",
-    )
+    ))
 
     assert run.request["params"]["serviceKey"] == "<REDACTED>"
 
 
-def test_debug_fetch_requires_a_custom_path_for_the_custom_entry() -> None:
+async def test_debug_fetch_requires_a_custom_path_for_the_custom_entry() -> None:
     client, fake = _client_with_fake_transport(b"{}")
 
-    run = client.debug_fetch("data-go-kr-custom", params={}, custom_path="")
+    run = (await client.debug_fetch("data-go-kr-custom", params={}, custom_path=""))
 
     assert run.error is not None
     assert run.error["type"] == "ValueError"
     assert fake.calls == []
 
 
-def test_timeout_is_threaded_through_to_the_httpx_client() -> None:
+async def test_timeout_is_threaded_through_to_the_httpx_client() -> None:
     client = HeritageClient(api_key="dummy-key", timeout=5.0)
     try:
         assert client._transport._client.timeout.connect == 5.0
     finally:
-        client.close()
+        await client.aclose()

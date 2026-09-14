@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from krheritage._ratelimit import AsyncTokenBucket
 from krheritage.catalog import EndpointCatalogRow, api_catalog, get_api_catalog_entry
-from krheritage.client import AsyncHeritageClient, HeritageClient
+from krheritage.client import HeritageClient
 from krheritage.config import HeritageConfig
 from krheritage.debug import DebugRun, debug_error, jsonable, redact_sensitive, save_fixture
 from krheritage.services import EventService, GisService, HeritageDetailService, SearchService
@@ -11,7 +12,7 @@ PROVIDER_NAME = "python-krheritage-api"
 
 __all__ = [
     "PROVIDER_NAME",
-    "AsyncHeritageClient",
+    "AsyncTokenBucket",
     "DebugRun",
     "EndpointCatalogRow",
     "EventService",

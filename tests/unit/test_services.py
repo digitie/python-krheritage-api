@@ -14,15 +14,15 @@ class FakeTransport:
         self.responses = list(responses)
         self.calls: list[tuple[str, dict[str, Any] | None]] = []
 
-    def get(self, url: str, params: dict[str, Any] | None = None) -> bytes:
+    async def get(self, url: str, params: dict[str, Any] | None = None) -> bytes:
         self.calls.append((url, params))
         return self.responses.pop(0)
 
-    def close(self) -> None:
+    async def aclose(self) -> None:
         pass
 
 
-def test_search_service_iter_all_details_uses_list_and_detail_endpoints() -> None:
+async def test_search_service_iter_all_details_uses_list_and_detail_endpoints() -> None:
     transport = FakeTransport(
         b"""
         <result>
@@ -53,7 +53,9 @@ def test_search_service_iter_all_details_uses_list_and_detail_endpoints() -> Non
     )
     service = SearchService(transport=transport, base_url="http://www.khs.go.kr/cha")
 
-    items = list(service.iter_all_details(page_size=100, max_pages=1, ccba_kdcd="25"))
+    items = [
+        item async for item in service.iter_all_details(page_size=100, max_pages=1, ccba_kdcd="25")
+    ]
 
     assert items[0].key.natural_key == "25-0000001-11"
     assert items[0].content == "Line1\nLine2"
@@ -67,7 +69,7 @@ def test_search_service_iter_all_details_uses_list_and_detail_endpoints() -> Non
     )
 
 
-def test_search_service_iter_all_details_skips_rows_with_incomplete_key(
+async def test_search_service_iter_all_details_skips_rows_with_incomplete_key(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     # live 목록에는 복합키 구성요소가 결측(빈 element/누락)인 row가 간헐적으로
@@ -103,7 +105,7 @@ def test_search_service_iter_all_details_skips_rows_with_incomplete_key(
     service = SearchService(transport=transport, base_url="http://www.khs.go.kr/cha")
 
     with caplog.at_level(logging.WARNING, logger="krheritage.services.search"):
-        items = list(service.iter_all_details(page_size=100, max_pages=1))
+        items = [item async for item in service.iter_all_details(page_size=100, max_pages=1)]
 
     # 정상 row 1건만 detail 조회: list 1콜 + detail 1콜.
     assert [item.key.natural_key for item in items] == ["25-0000001-11"]
@@ -119,7 +121,7 @@ def test_search_service_iter_all_details_skips_rows_with_incomplete_key(
     assert "ccbaAsno=None" in warnings[0].getMessage()
 
 
-def test_search_service_details_merges_result_level_identifiers() -> None:
+async def test_search_service_details_merges_result_level_identifiers() -> None:
     # live SearchKindOpenapiDt 응답은 복합키/좌표를 <result> 레벨에 두고 본문을
     # <item>에 중첩한다 — item만 취하면 key가 유실되어 검증이 터진다 (#5).
     transport = FakeTransport(
@@ -143,7 +145,7 @@ def test_search_service_details_merges_result_level_identifiers() -> None:
     )
     service = SearchService(transport=transport, base_url="http://www.khs.go.kr/cha")
 
-    detail = service.details("11", "0000010000000", "11")
+    detail = await service.details("11", "0000010000000", "11")
 
     assert detail.key.natural_key == "11-0000010000000-11"
     assert detail.name_ko == "Seoul Sungnyemun"
@@ -153,7 +155,7 @@ def test_search_service_details_merges_result_level_identifiers() -> None:
     assert detail.content == "Sungnyemun"
 
 
-def test_search_service_details_rejects_identifier_less_payload() -> None:
+async def test_search_service_details_rejects_identifier_less_payload() -> None:
     # 빈/불일치 key로 조회하면 live 응답은 식별자 없는 빈 payload를 돌려준다 —
     # 조용히 통과시키지 않고 fail-loud 해야 한다 (#5).
     transport = FakeTransport(
@@ -174,10 +176,10 @@ def test_search_service_details_rejects_identifier_less_payload() -> None:
     service = SearchService(transport=transport, base_url="http://www.khs.go.kr/cha")
 
     with pytest.raises(ValidationError, match="missing composite key"):
-        service.details("99", "9999999999999", "99")
+        (await service.details("99", "9999999999999", "99"))
 
 
-def test_event_service_iter_months_parses_legacy_and_split_titles() -> None:
+async def test_event_service_iter_months_parses_legacy_and_split_titles() -> None:
     transport = FakeTransport(
         b"""
         <result>
@@ -194,7 +196,7 @@ def test_event_service_iter_months_parses_legacy_and_split_titles() -> None:
     )
     service = EventService(transport=transport, base_url="http://www.khs.go.kr/cha")
 
-    events = list(service.iter_months(search_year=2026, search_month=5))
+    events = [item async for item in service.iter_months(search_year=2026, search_month=5)]
 
     assert events[0].display_title == "Festival Night"
     assert events[0].starts_on is not None
@@ -208,7 +210,7 @@ def test_event_service_iter_months_parses_legacy_and_split_titles() -> None:
     )
 
 
-def test_gis_service_spca_returns_geo_feature_collection() -> None:
+async def test_gis_service_spca_returns_geo_feature_collection() -> None:
     transport = FakeTransport(
         b"""
         <result>
@@ -222,7 +224,7 @@ def test_gis_service_spca_returns_geo_feature_collection() -> None:
     )
     service = GisService(transport=transport, base_url="https://gis-heritage.go.kr/openapi")
 
-    collection = service.spca(min_lng=126.0, min_lat=37.0, max_lng=127.0, max_lat=38.0)
+    collection = await service.spca(min_lng=126.0, min_lat=37.0, max_lng=127.0, max_lat=38.0)
 
     assert collection.features[0].geometry is not None
     assert collection.features[0].geometry.type == "Point"

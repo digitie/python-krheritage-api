@@ -25,14 +25,20 @@ kor-travel-map 쪽 변환 모듈(`kortravelmap.providers.krheritage`, ADR-006)�
 `src/kortravelmap/providers/krheritage.py` docstring(ADR-044)을 확인할 것.
 
 ```python
+import asyncio
 from krheritage import HeritageClient
 
-with HeritageClient() as client:
-    detail = client.search.details("25", "0000001", "11")
-    # detail은 krheritage.models.HeritageDetail이며, kor-travel-map은 이를
-    # import 없이 구조적으로(duck typing) KrHeritageItem으로 소비한다.
-    # 실제 변환 호출부는 kor-travel-map 저장소 자신의 ETL/파이프라인 코드를 확인할 것 —
-    # 이 문서는 그 호출부의 정확한 함수명을 보증하지 않는다.
+
+async def main() -> None:
+    async with HeritageClient() as client:
+        detail = (await client.search.details("25", "0000001", "11"))
+        # detail은 krheritage.models.HeritageDetail이며, kor-travel-map은 이를
+        # import 없이 구조적으로(duck typing) KrHeritageItem으로 소비한다.
+        # 실제 변환 호출부는 kor-travel-map 저장소 자신의 ETL/파이프라인 코드를 확인할 것 —
+        # 이 문서는 그 호출부의 정확한 함수명을 보증하지 않는다.
+
+
+asyncio.run(main())
 ```
 
 호출 순서(ETL 오케스트레이션, 정확한 클래스/모듈명은 kor-travel-map 쪽 문서가 정본)는 이

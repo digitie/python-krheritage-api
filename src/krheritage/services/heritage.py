@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -14,13 +14,13 @@ class HeritageDetailService:
 
     search: SearchService
 
-    def details(
+    async def details(
         self,
         ccba_kdcd: str,
         ccba_asno: str,
         ccba_ctcd: str,
     ) -> HeritageDetail:
-        return self.search.details(ccba_kdcd, ccba_asno, ccba_ctcd)
+        return (await self.search.details(ccba_kdcd, ccba_asno, ccba_ctcd))
 
     def iter_all_details(
         self,
@@ -28,7 +28,7 @@ class HeritageDetailService:
         page_size: int = 100,
         max_pages: int | None = None,
         **filters: Any,
-    ) -> Iterator[HeritageDetail]:
+    ) -> AsyncIterator[HeritageDetail]:
         return self.search.iter_all_details(
             page_size=page_size,
             max_pages=max_pages,
