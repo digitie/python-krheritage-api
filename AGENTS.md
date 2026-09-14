@@ -26,8 +26,7 @@
 
 - 버그 수정은 원인이 되는 코드만 건드리고 주변 리팩터링을 곁들이지 말 것
 - 기존 서비스 클래스(`search`/`event`/`gis`)의 공개 시그니처를 임의로 바꾸지 말 것
-- `AsyncHeritageClient`가 왜 `NotImplementedError`만 던지는지 이해하지 못한 채 비동기 지원을
-  "완성"시키려 하지 말 것 — 실제 확장은 별도 설계 결정이 필요하다
+- 비동기 서비스 계층과 공통 TPS 계약은 docs/decisions.md의 D-005를 따른다
 
 ## Goal-Driven Execution
 
@@ -66,8 +65,7 @@
 
 ## 절대 하지 말 것 (DO NOT)
 
-- `AsyncHeritageClient`를 그대로 사용 가능한 것처럼 문서화하지 말 것 — 현재는 항상
-  `NotImplementedError`를 던지는 자리표시자다
+- 동기 HTTP 클라이언트와 Async 접두사 별칭을 추가하지 말 것
 - feature 변환/도메인 매핑 로직을 이 저장소에 넣지 말 것 — 그 책임은 `python-krtour-map`의
   ETL 함수에 있다
 - `docs/anti_corruption.md`에 기록된 legacy URL을 별도 안내 없이 직접 호출하지 말 것

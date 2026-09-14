@@ -5,12 +5,24 @@ from collections.abc import Mapping
 from html import unescape
 from typing import Any
 
-from krheritage.exceptions import ApiErrorResponse
+from krheritage.debug import redact_sensitive
+from krheritage.exceptions import ApiErrorResponse, PayloadParseError
 from krheritage.transport import parse_payload
 
 
-def parsed_result(content: bytes) -> Mapping[str, Any]:
-    return unwrap_result(parse_payload(content))
+def parsed_result(content: bytes, *, api_key: str | None = None) -> Mapping[str, Any]:
+    try:
+        return unwrap_result(parse_payload(content))
+    except ApiErrorResponse as exc:
+        exc.message = redact_sensitive(exc.message, api_key=api_key)
+        exc.payload = redact_sensitive(exc.payload, api_key=api_key)
+        exc.args = (exc.code, exc.message)
+        raise exc from None
+    except PayloadParseError as exc:
+        exc.reason = redact_sensitive(exc.reason, api_key=api_key)
+        exc.prefix = redact_sensitive(exc.prefix, api_key=api_key)
+        exc.args = (exc.reason, exc.length, exc.prefix)
+        raise exc from None
 
 
 def unwrap_result(payload: Mapping[str, Any]) -> Mapping[str, Any]:

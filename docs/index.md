@@ -13,4 +13,4 @@
 
 ## 현재 scope
 
-Phase 0/1은 package scaffold, configuration, common code table, exception hierarchy, 초기 model/transport 기반을 다룬다. API endpoint service는 이후 phase에서 추가한다.
+현재 검색·상세·행사·GIS 서비스, 카탈로그 디버그와 페이지 순회를 native async로 제공한다. 설정·코드표·모델·파싱도 제공하며 아직 비어 있는 부가 서비스는 이번 전환 범위에서 새로 구현하지 않는다.

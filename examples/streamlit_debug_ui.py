@@ -15,6 +15,7 @@ generic ``HeritageClient.debug_fetch()`` method.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import sys
@@ -119,11 +120,11 @@ def _raw_response_tab(entry: EndpointCatalogRow, *, api_key: str, timeout: float
         return
 
     try:
-        client = HeritageClient(api_key=api_key or None, timeout=timeout)
-        try:
-            run = client.debug_fetch(entry.id, params=params, custom_path=custom_path)
-        finally:
-            client.close()
+        async def invoke() -> DebugRun:
+            async with HeritageClient(api_key=api_key or None, timeout=timeout) as client:
+                return await client.debug_fetch(entry.id, params=params, custom_path=custom_path)
+
+        run = asyncio.run(invoke())
     except Exception as exc:  # pragma: no cover - defensive; debug_fetch already structures errors
         run = DebugRun(
             function="debug_fetch",

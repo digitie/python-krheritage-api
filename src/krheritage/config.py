@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import math
 import os
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from krheritage.exceptions import ConfigError
@@ -26,7 +27,7 @@ DEFAULT_MAX_RPS = 5.0
 class HeritageConfig:
     """Runtime configuration loaded from explicit args and environment variables."""
 
-    api_key: str | None
+    api_key: str | None = field(repr=False)
     cache_dir: Path
     max_rps: float
     heritage_base_url: str = DEFAULT_HERITAGE_BASE_URL
@@ -45,8 +46,7 @@ class HeritageConfig:
         resolved_cache_dir = Path(
             cache_dir
             if cache_dir is not None
-            else os.getenv("KHERITAGE_CACHE_DIR")
-            or _default_cache_dir()
+            else os.getenv("KHERITAGE_CACHE_DIR") or _default_cache_dir()
         )
         resolved_max_rps = _resolve_max_rps(
             max_rps if max_rps is not None else os.getenv("KHERITAGE_MAX_RPS")
@@ -65,7 +65,7 @@ def _resolve_max_rps(value: float | str | None) -> float:
         max_rps = float(value)
     except (TypeError, ValueError) as exc:
         raise ConfigError("KHERITAGE_MAX_RPS must be a positive number") from exc
-    if max_rps <= 0:
+    if isinstance(value, bool) or not math.isfinite(max_rps) or max_rps <= 0:
         raise ConfigError("KHERITAGE_MAX_RPS must be greater than 0")
     return max_rps
 

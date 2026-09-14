@@ -12,7 +12,14 @@ class ConfigError(KrHeritageError, ValueError):
 
 
 class TransportError(KrHeritageError):
-    """Raised when HTTP transport fails before an API response is parsed."""
+    """HTTP 전송이 실패했을 때 상태와 재시도 가능 여부를 전달한다."""
+
+    def __init__(
+        self, message: str, *, status_code: int | None = None, retryable: bool = True,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.retryable = retryable
 
 
 class RateLimitError(TransportError):

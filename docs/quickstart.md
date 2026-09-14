@@ -7,14 +7,20 @@ python -m pip install -e ".[dev]"
 ```
 
 ```python
+import asyncio
 from krheritage import HeritageClient, PROVIDER_NAME
 from krheritage.codes import CityCode, HeritageType
 
-with HeritageClient(max_rps=5) as client:
-    print(PROVIDER_NAME)
-    print(client.config.cache_dir)
-    print(CityCode.CHUNGBUK.value, CityCode.CHUNGBUK.korean)
-    print(HeritageType.NATIONAL_TREASURE.korean)
+
+async def main() -> None:
+    async with HeritageClient(max_rps=5) as client:
+        print(PROVIDER_NAME)
+        print(client.config.cache_dir)
+        print(CityCode.CHUNGBUK.value, CityCode.CHUNGBUK.korean)
+        print(HeritageType.NATIONAL_TREASURE.korean)
+
+
+asyncio.run(main())
 ```
 
 환경 변수:

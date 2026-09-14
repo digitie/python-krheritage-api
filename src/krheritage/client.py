@@ -4,6 +4,9 @@ from collections.abc import Mapping
 from types import TracebackType
 from typing import Any
 
+import httpx
+
+from krheritage._ratelimit import AsyncTokenBucket
 from krheritage.catalog import EndpointCatalogRow, get_api_catalog_entry
 from krheritage.config import HeritageConfig
 from krheritage.debug import DebugRun, debug_error, redact_sensitive
@@ -15,7 +18,7 @@ from krheritage.services._payload import (
     result_items,
     unwrap_result,
 )
-from krheritage.transport import SyncHttpxTransport, parse_payload
+from krheritage.transport import AsyncHttpxTransport, parse_payload
 
 _DEBUG_MODEL_REGISTRY: dict[str, type[HeritageSummary]] = {
     "HeritageSummary": HeritageSummary,
@@ -24,7 +27,7 @@ _DEBUG_MODEL_REGISTRY: dict[str, type[HeritageSummary]] = {
 
 
 class HeritageClient:
-    """Synchronous facade for Korea Heritage open data services."""
+    """국가유산 조회·디버그를 제공하는 native async 클라이언트."""
 
     def __init__(
         self,
@@ -33,44 +36,52 @@ class HeritageClient:
         cache_dir: str | None = None,
         max_rps: float | None = None,
         timeout: float = 30.0,
+        rate_limiter: AsyncTokenBucket | None = None,
+        session: httpx.AsyncClient | None = None,
     ) -> None:
         self.config = HeritageConfig.from_env(
             api_key=api_key,
             cache_dir=cache_dir,
-            max_rps=max_rps,
+            max_rps=rate_limiter.max_rps if rate_limiter is not None else max_rps,
         )
-        self._transport = SyncHttpxTransport(self.config, timeout=timeout)
+        self._transport = AsyncHttpxTransport(
+            self.config, timeout=timeout, rate_limiter=rate_limiter, session=session
+        )
+        self.rate_limiter = self._transport.rate_limiter
         self.search = SearchService(
             transport=self._transport,
             base_url=self.config.heritage_base_url,
+            api_key=self.config.api_key,
         )
         self.heritage = HeritageDetailService(search=self.search)
         self.event = EventService(
             transport=self._transport,
             base_url=self.config.heritage_base_url,
+            api_key=self.config.api_key,
         )
         self.gis = GisService(
             transport=self._transport,
             base_url=self.config.gis_base_url,
+            api_key=self.config.api_key,
         )
         self.closed = False
 
-    def __enter__(self) -> HeritageClient:
+    async def __aenter__(self) -> HeritageClient:
         return self
 
-    def __exit__(
+    async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
         exc: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        self.close()
+        await self.aclose()
 
-    def close(self) -> None:
-        self._transport.close()
+    async def aclose(self) -> None:
+        await self._transport.aclose()
         self.closed = True
 
-    def debug_fetch(
+    async def debug_fetch(
         self,
         entry_id: str,
         params: Mapping[str, Any] | None = None,
@@ -103,18 +114,22 @@ class HeritageClient:
             trace.append(f"URL resolution failed: {exc}")
             return DebugRun(
                 function="debug_fetch",
-                input=input_data,
+                input=redact_sensitive(input_data, api_key=self.config.api_key),
                 request={},
                 response={},
                 parsed=None,
                 processed=None,
-                trace=trace,
-                error=debug_error(exc),
+                trace=redact_sensitive(trace, api_key=self.config.api_key),
+                error=debug_error(exc, api_key=self.config.api_key),
                 catalog=catalog_snapshot,
             )
 
         outgoing_params = dict(request_params)
-        if entry.credential_param and self.config.api_key:
+        if (
+            entry.credential_param
+            and self.config.api_key
+            and httpx.URL(url).host == httpx.URL(self.config.data_go_kr_base_url).host
+        ):
             outgoing_params.setdefault(entry.credential_param, self.config.api_key)
         request_info = {
             "method": "GET",
@@ -124,33 +139,37 @@ class HeritageClient:
         trace.append(f"request URL: {url}")
 
         try:
-            body = self._transport.get(url, params=outgoing_params or None)
+            body = await self._transport.get(url, params=outgoing_params or None)
         except Exception as exc:  # transport/rate-limit failures before any response exists
             trace.append(f"request failed: {exc.__class__.__name__}")
             return DebugRun(
                 function="debug_fetch",
-                input=input_data,
-                request=request_info,
+                input=redact_sensitive(input_data, api_key=self.config.api_key),
+                request=redact_sensitive(request_info, api_key=self.config.api_key),
                 response={},
                 parsed=None,
                 processed=None,
-                trace=trace,
-                error=debug_error(exc),
+                trace=redact_sensitive(trace, api_key=self.config.api_key),
+                error=debug_error(exc, api_key=self.config.api_key),
                 catalog=catalog_snapshot,
             )
         trace.append(f"response received: {len(body)} bytes")
 
         if entry.response_format == "html":
             raw_payload: Any = {"html": body.decode("utf-8", errors="replace")}
-            response_info = {"status_code": 200, "headers": {}, "body": raw_payload}
+            response_info = {
+                "status_code": 200,
+                "headers": {},
+                "body": redact_sensitive(raw_payload, api_key=self.config.api_key),
+            }
             return DebugRun(
                 function="debug_fetch",
-                input=input_data,
-                request=request_info,
+                input=redact_sensitive(input_data, api_key=self.config.api_key),
+                request=redact_sensitive(request_info, api_key=self.config.api_key),
                 response=response_info,
-                parsed=raw_payload,
-                processed=raw_payload,
-                trace=trace,
+                parsed=redact_sensitive(raw_payload, api_key=self.config.api_key),
+                processed=redact_sensitive(raw_payload, api_key=self.config.api_key),
+                trace=redact_sensitive(trace, api_key=self.config.api_key),
                 catalog=catalog_snapshot,
             )
 
@@ -160,16 +179,20 @@ class HeritageClient:
             trace.append(f"payload parse failed: {exc.__class__.__name__}")
             return DebugRun(
                 function="debug_fetch",
-                input=input_data,
-                request=request_info,
+                input=redact_sensitive(input_data, api_key=self.config.api_key),
+                request=redact_sensitive(request_info, api_key=self.config.api_key),
                 response={"status_code": 200, "headers": {}, "body": None},
                 parsed=None,
                 processed=None,
-                trace=trace,
-                error=debug_error(exc),
+                trace=redact_sensitive(trace, api_key=self.config.api_key),
+                error=debug_error(exc, api_key=self.config.api_key),
                 catalog=catalog_snapshot,
             )
-        response_info = {"status_code": 200, "headers": {}, "body": raw_payload}
+        response_info = {
+            "status_code": 200,
+            "headers": {},
+            "body": redact_sensitive(raw_payload, api_key=self.config.api_key),
+        }
 
         try:
             result = unwrap_result(raw_payload)
@@ -177,13 +200,13 @@ class HeritageClient:
             trace.append(f"provider returned an error envelope: {exc.__class__.__name__}")
             return DebugRun(
                 function="debug_fetch",
-                input=input_data,
-                request=request_info,
+                input=redact_sensitive(input_data, api_key=self.config.api_key),
+                request=redact_sensitive(request_info, api_key=self.config.api_key),
                 response=response_info,
                 parsed=None,
                 processed=None,
-                trace=trace,
-                error=debug_error(exc),
+                trace=redact_sensitive(trace, api_key=self.config.api_key),
+                error=debug_error(exc, api_key=self.config.api_key),
                 catalog=catalog_snapshot,
             )
 
@@ -199,63 +222,25 @@ class HeritageClient:
                 try:
                     models.append(_validate_heritage_row(model_cls, row).model_dump(mode="json"))
                 except Exception as exc:
-                    validation_errors.append({"row_index": index, **debug_error(exc)})
+                    validation_errors.append(
+                        {"row_index": index, **debug_error(exc, api_key=self.config.api_key)}
+                    )
             parsed_payload = models
             trace.append(
-                f"{entry.model_hint} validation: {len(models)} ok, "
-                f"{len(validation_errors)} failed"
+                f"{entry.model_hint} validation: {len(models)} ok, {len(validation_errors)} failed"
             )
 
         return DebugRun(
             function="debug_fetch",
-            input=input_data,
-            request=request_info,
+            input=redact_sensitive(input_data, api_key=self.config.api_key),
+            request=redact_sensitive(request_info, api_key=self.config.api_key),
             response=response_info,
-            parsed=parsed_payload,
-            processed=rows,
-            trace=trace,
+            parsed=redact_sensitive(parsed_payload, api_key=self.config.api_key),
+            processed=redact_sensitive(rows, api_key=self.config.api_key),
+            trace=redact_sensitive(trace, api_key=self.config.api_key),
             validation_errors=tuple(validation_errors),
             catalog=catalog_snapshot,
         )
-
-    @classmethod
-    def aio(
-        cls,
-        *,
-        api_key: str | None = None,
-        cache_dir: str | None = None,
-        max_rps: float | None = None,
-    ) -> AsyncHeritageClient:
-        return AsyncHeritageClient(api_key=api_key, cache_dir=cache_dir, max_rps=max_rps)
-
-
-class AsyncHeritageClient:
-    """Asynchronous facade placeholder for service-layer expansion."""
-
-    def __init__(
-        self,
-        *,
-        api_key: str | None = None,
-        cache_dir: str | None = None,
-        max_rps: float | None = None,
-    ) -> None:
-        raise NotImplementedError(
-            "AsyncHeritageClient has no async service layer yet; use HeritageClient instead."
-        )
-
-    async def __aenter__(self) -> AsyncHeritageClient:
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        await self.aclose()
-
-    async def aclose(self) -> None:
-        self.closed = True
 
 
 def _resolve_debug_url(
