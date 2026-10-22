@@ -63,7 +63,8 @@ class HeritageEvent(KrHeritageModel):
         """회차 단위 결정적 키 ``{sn}::{starts_on}::{ends_on}`` (``sn`` 없으면 ``None``).
 
         live 응답에서 ``seqNo``는 회차마다 반복되지만 (``seqNo``, ``sDate``, ``eDate``)
-        조합은 2026-10 실측 기준 유일했다(상류가 보장하는 제약은 아니다). 날짜가 비면 해당 자리는 빈 문자열이다.
+        조합은 2026-10 실측 기준 유일했다(상류가 보장하는 제약은 아니다).
+        날짜가 비면 해당 자리는 빈 문자열이다.
         """
         if not self.sn:
             return None
