@@ -7,7 +7,7 @@ from krheritage.config import HeritageConfig
 from krheritage.debug import DebugRun, debug_error, jsonable, redact_sensitive, save_fixture
 from krheritage.services import EventService, GisService, HeritageDetailService, SearchService
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 PROVIDER_NAME = "python-krheritage-api"
 
 __all__ = [

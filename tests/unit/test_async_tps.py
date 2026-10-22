@@ -14,8 +14,8 @@ from krheritage.transport import AsyncHttpxTransport
 LIST = b"""<result><totalCnt>1</totalCnt><pageIndex>1</pageIndex><pageUnit>1</pageUnit>
 <item><ccbaKdcd>11</ccbaKdcd><ccbaAsno>0000010000000</ccbaAsno><ccbaCtcd>11</ccbaCtcd>
 <ccbaMnm1>Sungnyemun</ccbaMnm1></item></result>"""
-EVENT = b"""<result><item><sn>EVT-1</sn><title>Festival</title>
-<startDate>20260901</startDate><endDate>20260930</endDate></item></result>"""
+EVENT = b"""<result><item><seqNo>EVT-1</seqNo><subTitle>Festival</subTitle>
+<sDate>20260901</sDate><eDate>20260930</eDate></item></result>"""
 GIS = b"""<result><item><gid>AREA-1</gid><longitude>127</longitude>
 <latitude>37</latitude></item></result>"""
 
