@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from krheritage.models import HeritageEvent
 from krheritage.services import EventService, GisService, SearchService
+from krheritage.services.event import _event_mapping
 
 
 class FakeTransport:
@@ -251,11 +252,20 @@ def test_heritage_event_address_and_dates_are_best_effort() -> None:
     assert HeritageEvent.model_validate({"sDate": ""}).starts_on is None
     assert HeritageEvent.model_validate({"sDate": "2026"}).starts_on is None
     assert HeritageEvent.model_validate({"sDate": "20261001"}).occurrence_key is None
+    # JSON 응답처럼 숫자가 와도 row 하나로 월 전체가 깨지지 않는다.
+    numeric = HeritageEvent.model_validate({"seqNo": 15720, "sDate": 20261001})
+    assert numeric.sn == "15720"
+    assert numeric.starts_on == date(2026, 10, 1)
+    assert HeritageEvent.model_validate({"sDate": "2026-10-01T09:00:00"}).starts_on == date(
+        2026, 10, 1
+    )
 
 
 def test_heritage_event_keeps_split_title_compat() -> None:
     event = HeritageEvent.model_validate({"title": "Festival", "subTitle2": "Night"})
     assert event.display_title == "Festival Night"
+    legacy = HeritageEvent.model_validate(_event_mapping({"subTitle1": "A", "subTitle2": "B"}))
+    assert legacy.display_title == "A B"
 
 
 async def test_gis_service_spca_returns_geo_feature_collection() -> None:

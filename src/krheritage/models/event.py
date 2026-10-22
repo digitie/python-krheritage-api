@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from krheritage.models.base import KrHeritageModel
 
@@ -22,6 +22,10 @@ class HeritageEvent(KrHeritageModel):
     응답에는 좌표가 없다 — ``longitude``/``latitude``는 항상 ``None``이다.
     ``address``는 ``sido``/``gugun``을 이어 붙인 best-effort 행정구역 문자열이다.
     """
+
+    # JSON 응답에서 숫자로 올 수 있는 ``seqNo``/``siteCode`` 등이 row 하나로 월 전체를
+    # 깨지 않도록 숫자→문자열 강제.
+    model_config = ConfigDict(coerce_numbers_to_str=True)
 
     sn: str | None = Field(default=None, alias="seqNo")
     site_code: str | None = Field(default=None, alias="siteCode")
@@ -59,7 +63,7 @@ class HeritageEvent(KrHeritageModel):
         """회차 단위 결정적 키 ``{sn}::{starts_on}::{ends_on}`` (``sn`` 없으면 ``None``).
 
         live 응답에서 ``seqNo``는 회차마다 반복되지만 (``seqNo``, ``sDate``, ``eDate``)
-        조합은 유일하다(2026-10 실측). 날짜가 비면 해당 자리는 빈 문자열이다.
+        조합은 2026-10 실측 기준 유일했다(상류가 보장하는 제약은 아니다). 날짜가 비면 해당 자리는 빈 문자열이다.
         """
         if not self.sn:
             return None
@@ -78,10 +82,16 @@ class HeritageEvent(KrHeritageModel):
     @field_validator("starts_on", "ends_on", mode="before")
     @classmethod
     def _parse_compact_date(cls, value: object) -> object:
-        # live 형식은 ``YYYYMMDD``. 구분자가 섞인 표기도 숫자 8자리면 받는다.
+        # live 형식은 ``YYYYMMDD``. ISO 날짜(시각 포함)와 숫자 8자리 표기·정수도 받는다.
         # 달력상 불가능한 값은 row 하나 때문에 월 전체 파싱이 깨지지 않도록 ``None``
         # (원문은 ``raw``에 보존된다).
+        if isinstance(value, int) and not isinstance(value, bool):
+            value = str(value)
         if isinstance(value, str):
+            try:
+                return date.fromisoformat(value.strip()[:10])
+            except ValueError:
+                pass
             digits = "".join(char for char in value if char.isdigit())
             if len(digits) != 8:
                 return None
