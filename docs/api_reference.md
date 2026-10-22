@@ -36,7 +36,7 @@ Service는 `krheritage.models` instance를 반환한다. TripMate feature를 직
 - `HeritageKey`
 - `HeritageSummary`
 - `HeritageDetail`
-- `HeritageEvent`
+- `HeritageEvent` — live `selectEventListOpenapi.do` `<item>` 1회차. `sn`(=`seqNo`)은 회차마다 반복되므로 row 키는 `occurrence_key`; 좌표 없음, `address`는 `sido`+`gugun` 파생
 - `GeoFeature`
 - `GeoFeatureCollection`
 - `PaginatedResult`

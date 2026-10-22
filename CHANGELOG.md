@@ -1,6 +1,19 @@
 # 변경 기록
 
-## 미출시 — async-only와 TPS
+## [0.1.1] - 2026-10-22
+
+### 수정
+
+- `HeritageEvent`를 live `selectEventListOpenapi.do` 응답 형태에 맞췄다. 기존 alias(`sn`/`startDate`/`endDate`/`siteName`/`telName`/`mainImage`)는 실제 응답에 없는 이름이라 운영에서 `sn`·기간·장소·주소·연락처가 전부 `None`이었다(kor-travel-map에서 5,306/5,306 행사 row 탈락). 새 매핑: `seqNo`→`sn`, `siteCode`→`site_code`, `subContent`→`contents`, `sDate`/`eDate`(`YYYYMMDD`)→`starts_on`/`ends_on`, `groupName`→`group_name`, `contact`→`tel_name`, `subDesc`→`place`, `subPath`→`url`, `subDesc_2`→`target_audience`, `subDesc_3`→`fee`, `mainImageTemp`→`main_image`, `subDate`→`schedule_text`, `sido`/`gugun` 신규. `address`는 `"{sido} {gugun}"` best-effort 파생. 응답에 좌표가 없어 `longitude`/`latitude`는 `None`.
+- 빈 CDATA 값은 `None`, 달력상 불가능한 날짜는 row 하나로 월 전체가 깨지지 않도록 `None`(원문은 `raw`).
+
+### 추가
+
+- `HeritageEvent.occurrence_key`(`{sn}::{starts_on}::{ends_on}`): live `seqNo`는 프로그램 식별자라 회차마다 반복된다(2026-10 실측 2,006 row 중 1,378 row가 중복 `seqNo`, 조합 키는 유일).
+- live 응답 원문 fixture `tests/fixtures/event_list_2026_10.xml`.
+
+### async-only와 TPS (#11)
+
 
 HeritageClient의 서비스·페이지·디버그를 native async로 전환했다. AsyncTokenBucket을 공개하고 max_rps/rate_limiter로 요청·재시도·리다이렉트의 TPS를 제어한다. 동기 클라이언트와 비동기 자리표시자·aio를 제거했다. HTTP 상태를 보존한 재시도 판별, 스트림 취소 정리, 사용자 주입 세션 수명을 검증했다.
 
